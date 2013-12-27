@@ -116,25 +116,24 @@ class fl extends CI_Controller {
 	}
 	function startCrawler()
 	{
-		$path='/home/neelesh/public_html/CI/';
 		$this->psslib->updateLog("Going to download data from given url..");
 		#$this->myGET('ip.html','http://x5.net/ip.html',"S");
 		#$downloadPage=file_get_contents('ip.html');die;
-		$this->myGET($path.'downloadPage.html',$this->downloadurl,"S");
-		$downloadPage=file_get_contents($path.'downloadPage.html');
+		$this->myGET('downloadPage.html',$this->downloadurl,"S");
+		$downloadPage=file_get_contents('downloadPage.html');
 		if(preg_match('/>\s*Download\s*the\s*\w+\s+\d+\s*,\s*\d+\s*Information/is',$downloadPage,$match)){
 			$downloadPage=$this->psslib->before($match[0],$downloadPage);
 			if(preg_match('/.+href\W+(.*?)[\'\"]/is',$downloadPage,$match)){
 				$mdbfileurl1=$match[1];
 				$this->clean_compalete_url($mdbfileurl1);
-				$this->myGET($path.'mdbPage1.html',$mdbfileurl1);
-				$mdbPage1=file_get_contents($path.'mdbPage1.html');
+				$this->myGET('mdbPage1.html',$mdbfileurl1);
+				$mdbPage1=file_get_contents('mdbPage1.html');
 				if(preg_match('/\W+downloadUrl\W+(http.*?)[\'\"]/is',$mdbPage1,$match))
 				{
 					$mdbfileurl2=$match[1];
 					$this->clean_compalete_url($mdbfileurl2);
-					$this->myGET($path.'mdbPage2.html',$mdbfileurl2);
-					$mdbPage2=file_get_contents($path.'mdbPage2.html');
+					$this->myGET('mdbPage2.html',$mdbfileurl2);
+					$mdbPage2=file_get_contents('mdbPage2.html');
 					if(preg_match('/>\s*Download\s*anyway\s*</is',$mdbPage2,$match)){
 						$mdbPage2=$this->psslib->before($match[0],$mdbPage2);
 						if(preg_match('/.+href\W+(.*?)[\'\"]/is',$mdbPage2,$match)){
@@ -144,7 +143,7 @@ class fl extends CI_Controller {
 								$mdbfileurl3="http://docs.google.com/".$mdbfileurl3;
 							}
 							$this->psslib->updateLog("Going to save data in mdb file..");
-							$this->myGET($path.'Florida.mdb',$mdbfileurl3);
+							$this->myGET('Florida.mdb',$mdbfileurl3);
 						}
 					}
 				}
