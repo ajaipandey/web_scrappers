@@ -342,6 +342,7 @@ class il extends CI_Controller {
 		if(preg_match('/>\s*SENTENCING\s*INFORMATION.*?table>(.*?)<\/table></is',$FinalResultFile,$match))
 		{
 			$sentArray=array();
+			$offenseArray=array();	
 			$tempfile=$match[1];
 			@$this->htmlDoc->loadHTML($tempfile);
 			$this->xpath = new DOMXPath($this->htmlDoc);

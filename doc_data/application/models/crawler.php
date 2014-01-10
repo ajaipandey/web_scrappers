@@ -10,6 +10,7 @@ class Crawler extends CI_Model {
 		$this->type		='';
 		$this->location	='';
 		$this->description= '';
+		
 		}
 	
 	function initialize(){
@@ -56,30 +57,41 @@ class Crawler extends CI_Model {
 		return $query->result_array();
 		
 	}
-	
+
 	function insertodbc($odbcconn,$tableName, $array)
 	{
-
-		$queryStr = '';
-		$valueStr = '';
-		foreach($array as $key=>$value){
-		
-			$queryStr.= mysql_real_escape_string($key).',';
-			$valueStr.= "'".mysql_real_escape_string($value)."',";
-		
+		$tableArray['INMATE_RELEASE_ROOT'] 			= array('releasedateflag_descr'=>'ReleaseDateFlag');
+		$tableArray['INMATE_RELEASE_OFFENSES_CPS'] = array('adjudication_descr'=>'adjudicationcharge_descr');
+		$tableArray['INMATE_RELEASE_OFFENSES_prpr']= array('adjudication_descr'=>'adjudicationcharge_descr');
+		$tableArray['INMATE_RELEASE_DETAINERS'] 		= array('detainertype_descr'=>'DetainerType','cancelwithdrawn_descr'=>'CancelWithdrawn');
+		$tableArray['OFFENDER_OFFENSES_CCS'] 			= array('adjudication_descr'=>'adjudicationcharge_descr');
+		$tableArray['INMATE_ACTIVE_ROOT'] 				= array('releasedateflag_descr'=>'ReleaseDateFlag');
+		$tableArray['INMATE_ACTIVE_OFFENSES_CPS'] 	= array('adjudication_descr'=>'adjudicationcharge_descr');
+		$tableArray['INMATE_ACTIVE_OFFENSES_prpr'] = array('adjudication_descr'=>'adjudicationcharge_descr');
+		$tableArray['INMATE_ACTIVE_DETAINERS'] 		= array('detainertype_descr'=>'DetainerType','cancelwithdrawn_descr'=>'CancelWithdrawn');
+		$tablenName['INMATE_RELEASE_SCARSMARKS']		="INMATE_RELEASE_SCARS";
+		$tablenName['INMATE_ACTIVE_SCARSMARKS']		="INMATE_ACTIVE_SCARS";
+		$array1=array();
+		if(isset($tablenName[$tableName])) {
+				$tableName=$tablenName[$tableName];
 		}
-		$queryStr = preg_replace('/\,$/s','',$queryStr);
-		$valueStr = preg_replace('/\,$/s','',$valueStr);
-
-	    $sql = "INSERT INTO $tableName($queryStr) values ($valueStr)";
-		
-		$this->db->insert($tableName,$array);
-		
+		foreach($array as $key=>$value){
+			if(isset($tableArray[$tableName])) {
+				if (array_key_exists($key, $tableArray[$tableName])) {
+					$key=$tableArray[$tableName][$key];
+					continue;
+				}
+			}
+			$array1[$key]=$value;
+		}
+		$this->db->insert($tableName,$array1);
+	
 	}
+
 	function odbc()
 	{
-	$odbc_conn=odbc_connect('MDB-FL','root','');
-	return $odbc_conn;
+		$odbc_conn=odbc_connect('MDB-FL','root','');
+		return $odbc_conn;
 	
 	}
 	

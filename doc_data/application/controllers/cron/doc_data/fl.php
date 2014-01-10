@@ -16,11 +16,12 @@ class fl extends CI_Controller {
 		$this->downloadurl	= 'http://www.dc.state.fl.us/pub/obis_request.html';
 		$this->db1        	= $this->crawler->odbc();
 		$this->db 		  	= $this->crawler->development_database();
-		$this->State		="FL";
+		$this->State		="FL"; 
 		
 	}
 	function index()
 	{   
+		$dateArray = array('DetainerDate'=>'DetainerDate','RemovalDate'=>'RemovalDate','ReceiptDate'=>'ReceiptDate','ReleaseDate'=>'ReleaseDate','OffenseDate'=>'OffenseDate','DateAdjudicated'=>'DateAdjudicated','BirthDate'=>'BirthDate','PrisonReleaseDate'=>'PrisonReleaseDate','SupervisionTerminationDate'=>'SupervisionTerminationDate');
 		if(file_exists($this->proxyFile))
 		{
 			$this->proxyStatus=$this->psslib->checkProxy();
@@ -39,75 +40,116 @@ class fl extends CI_Controller {
 			$this->psslib->updateLog("Going to insert cron status..");
 			$this->db->insert('CRON_STATUS',$values);
 			$this->startCrawler();
-			$odbc_conn = $this->crawler->odbc();
-			$result = odbc_tables($odbc_conn);
-			while (odbc_fetch_row($result))
+			echo "going to fetch data from mdb file\n";
+			//$odbc_conn = $this->crawler->odbc();
+			$db = new PDO('odbc:MDB-FL','root','');
+			$tablesArray=array();
+			$q = $db->prepare("SELECT * FROM MSysObjects WHERE Type=1 AND Flags=0");
+			$q->execute();
+			$table_fields = $q->fetchALL(PDO::FETCH_ASSOC);
+			$q->closeCursor();			
+			foreach($table_fields as $Key)
 			{
-				if(odbc_result($result,"TABLE_TYPE")=="TABLE")
+				$tableName=$Key['Name'];
+				$stmt = $db->prepare("select * from $tableName ");
+				$stmt->execute();
+				while($result = $stmt->fetch(PDO::FETCH_ASSOC))
 				{
-					$tableName=odbc_result($result,"TABLE_NAME");
-					$tableName1 ="INMATE_ACTIVE_ROOT";
-					$tableName2 ="INMATE_RELEASE_ROOT";
-					$tableName3 ="OFFENDER_ROOT";
+					foreach($result as $key=>$value){
+						if(isset($dateArray[$key])) {
+							if (array_key_exists($key, $dateArray) and $result[$key]!=null) {
+								$result[$key]= date('Y-m-d', strtotime($result[$key]));
+							}
+						}
+					}
+					if($tableName!='CONTENTS'){
+						if($tableName=='INMATE_ACTIVE_SCARSMARKS'){	$tableName="INMATE_ACTIVE_SCARS";};
+						if($tableName=='INMATE_RELEASE_SCARSMARKS'){	$tableName="INMATE_RELEASE_SCARS";};
+						$table_cond="WHERE DCNumber='".$result['DCNumber']."'";
+						$table_result=$this->crawler->array_exists($tableName,$table_cond);
+						if(count($table_result)==0)
+						{
+							$this->psslib->updateLog("Going to insert record from mdb file into database..");
+							$this->crawler->insertodbc($db,$tableName,$result);
+						}
+					}else{
+						$this->crawler->insertodbc($db,$tableName,$result);
+					}
+				}
+				$stmt->closeCursor();
+				if($tableName=="INMATE_ACTIVE_ROOT")
+				{
+					$stmt1 = $db->prepare("select * from $tableName ");
+					$stmt1->execute();
 					$state_code	="FL";
 					$image_status=0;
-					if($tableName1!='')
+					$statetableName1="STATES";
+					
+					while($result1 = $stmt1->fetch(PDO::FETCH_ASSOC))
 					{
-						$res1 = odbc_exec($odbc_conn,"SELECT * FROM $tableName1");
-						while($dataArray = odbc_fetch_array($res1)) {
-							$state_array=array();
-							$state_array['DCNumber']	= $dataArray['DCNumber'];
-							$state_array['state_code']	= $state_code;
-							$state_array['image_status']= $image_status;
-							$state_cond="WHERE DCNumber='".$state_array['DCNumber']."'";
-							$state_result=$this->crawler->array_exists($tableName1,$state_cond);
-							if(count($state_result)==0)
-							{
-								$this->crawler->insertodbc($odbc_conn,'STATES',$state_array);
-							}
+						$state_array1=array();
+						$state_array1['DCNumber']	= $result1['DCNumber'];
+						$state_array1['state_code']	= $state_code;
+						$state_array1['image_status']= $image_status;
+						$state_cond1="WHERE DCNumber='".$state_array1['DCNumber']."'";
+						$state_result1=$this->crawler->array_exists($statetableName1,$state_cond1);
+						if(count($state_result1)==0)
+						{
+							$this->psslib->updateLog("Going to insert record from mdb $tableName into $statetableName1 ..");
+							$this->crawler->insertodbc($db,'STATES',$state_array1);
+						}
+						
+					}
+					$stmt1->closeCursor();
+				}
+				if($tableName=="INMATE_RELEASE_ROOT")
+				{
+					$stmt2 = $db->prepare("select * from $tableName ");
+					$stmt2->execute();
+					$state_code	="FL";
+					$image_status=0;
+					$statetableName2="STATES";
+					while($result2 = $stmt2->fetch(PDO::FETCH_ASSOC))
+					{
+						$state_array2=array();
+						$state_array2['DCNumber']	= $result2['DCNumber'];
+						$state_array2['state_code']	= $state_code;
+						$state_array2['image_status']= $image_status;
+						$state_cond2="WHERE DCNumber='".$state_array2['DCNumber']."'";
+						$state_result2=$this->crawler->array_exists($statetableName2,$state_cond2);
+						if(count($state_result2)==0)
+						{
+							$this->psslib->updateLog("Going to insert record from mdb $tableName into $statetableName2 ..");
+							$this->crawler->insertodbc($db,'STATES',$state_array2);
 						}
 					}
-					if($tableName2!='')
+					$stmt2->closeCursor();
+				}
+				if($tableName=="OFFENDER_ROOT")
+				{
+					$stmt3 = $db->prepare("select * from $tableName ");
+					$stmt3->execute();
+					$state_code	="FL";
+					$image_status=0;
+					$statetableName3="STATES";
+					while($result3 = $stmt3->fetch(PDO::FETCH_ASSOC))
 					{
-						$res2 = odbc_exec($odbc_conn,"SELECT * FROM $tableName2");
-						while($dataArray = odbc_fetch_array($res2)) {
-							$state_array2=array();
-							$state_array2['DCNumber']	= $dataArray['DCNumber'];
-							$state_array2['state_code']	= $state_code;
-							$state_array2['image_status']= $image_status;
-							$state_cond2="WHERE DCNumber='".$state_array2['DCNumber']."'";
-							$state_result2=$this->crawler->array_exists($tableName2,$state_cond2);
-							if(count($state_result2)==0)
-							{
-								$this->crawler->insertodbc($odbc_conn,'STATES',$state_array2);
-							}
+						$state_array3=array();
+						$state_array3['DCNumber']	= $result3['DCNumber'];
+						$state_array3['state_code']	= $state_code;
+						$state_array3['image_status']= $image_status;
+						$state_cond3="WHERE DCNumber='".$state_array3['DCNumber']."'";
+						$state_result3=$this->crawler->array_exists($statetableName3,$state_cond3);
+						if(count($state_result3)==0)
+						{
+							$this->psslib->updateLog("Going to insert record from mdb $tableName into $statetableName3 ..");
+							$this->crawler->insertodbc($db,'STATES',$state_array3);
 						}
 					}
-					if($tableName3!='')
-					{
-						$res3 = odbc_exec($odbc_conn,"SELECT * FROM $tableName3");
-						while($dataArray = odbc_fetch_array($res3)) {
-							$state_array3=array();
-							$state_array3['DCNumber']	= $dataArray['DCNumber'];
-							$state_array3['state_code']	= $state_code;
-							$state_array3['image_status']= $image_status;
-							$state_cond3="WHERE DCNumber='".$state_array3['DCNumber']."'";
-							$state_result3=$this->crawler->array_exists($tableName3,$state_cond3);
-							if(count($state_result3)==0)
-							{
-								$this->crawler->insertodbc($odbc_conn,'STATES',$state_array3);
-							}
-						}
-					}
-					##-----Table Data----
-					$res = odbc_exec($odbc_conn,"SELECT * FROM $tableName");
-					while($dataArray = odbc_fetch_array($res)) {
-						$this->crawler->insertodbc($odbc_conn,$tableName1,$dataArray);
-					}
+					$stmt3->closeCursor();
 				}
 			}
 			$this->selectDcnumber();
-				
 		}
 		else
 		{
@@ -145,6 +187,7 @@ class fl extends CI_Controller {
 							}
 							$this->psslib->updateLog("Going to save data in mdb file..");
 							$this->myGET('Florida.mdb',$mdbfileurl3);
+							echo "mdb file has been saved\n";
 						}
 					}
 				}
@@ -156,7 +199,7 @@ class fl extends CI_Controller {
 	{
 		if($this->proxyStatus==1){
 			$this->psslib->configureProxy();
-	                $this->proxyIP		= $this->psslib->proxyIP;
+	        $this->proxyIP		= $this->psslib->proxyIP;
 			$this->proxyPort	= $this->psslib->proxyPort;
 			$this->proxyUserPwd	= $this->psslib->proxyUserPwd;
 			$curlStr = "curl -x $this->proxyIP:$this->proxyPort -U $this->proxyUserPwd --compressed -A 'Mozilla/5.0 (Windows NT 6.1; rv:25.0) Gecko/20100101 Firefox/25.0' -L ";
@@ -183,20 +226,18 @@ class fl extends CI_Controller {
 		$url = str_replace("\\", '', $url);
 		$url = trim($url);
 	}
-	
 	function selectDcnumber()
 	{
-		$this->psslib->updateLog(" Going to select DCNumber from 'state' table ...");
+		$this->psslib->updateLog(" Going to select DCNumber from 'STATES' table ...");
 		
 		$conditions="WHERE `state_code`='FL' and image_status=0";
 		$tablename="STATES";
 		$result=$this->crawler->array_exists($tablename,$conditions);
-		foreach($results as $result)
+		foreach($result as $results)
 		{
-			$DCNumber=$result['DCNumber'];
+			$DCNumber=$results['DCNumber'];
 			$this->getDCNumber($DCNumber);
 		}
-		
 	}
 	function getDCNumber($DCNumber)
 	{
@@ -216,25 +257,19 @@ class fl extends CI_Controller {
 			$this->psslib->updateLog(" Going to insert records in $inmate_imagesTable table");
 			$this->crawler->insert_array($inmate_imagesTable,$inmate_imagesArray);
 			$state_tablename='STATES';
-			//$state_condition="where DCNumber='".$inmate_imagesArray['DCNumber']."' and image_status=0 and state_code='FL'";
-			//$state_sql="UPDATE $state_tablename SET image_status=1 $state_condition";
 			$this->psslib->updateLog(" Going to update image_status in  $state_tablename table");
-			$this->updatestatus();
-			
-			
+			$this->updatestatus($inmate_imagesArray);
 		}
 		else
 		{
 			$this->psslib->appendFile($this->psslib->errorLog," duplicate records are already exists in $inmate_imagesTable ");
 		}
 	}
-	
-	
-	function updatestatus()
+	function updatestatus($inmate_imagesArray)
 	{
+		$this->psslib->updateLog("Going to Update 'STATE' table ..");
 		$status=array('image_status'=>1);
 		$conditions = array('DCNumber' => $inmate_imagesArray['DCNumber'], 'image_status' =>0,'state_code'=>'FL');
-		
 		$this->db->where($conditions);
         $this->db->update('STATES', $status); 
 	}

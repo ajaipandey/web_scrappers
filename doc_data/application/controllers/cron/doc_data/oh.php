@@ -252,7 +252,7 @@ class oh extends CI_Controller {
 	{
 		$this->psslib->updateLog(" Going to final page for get the final data for $numberUrl ...");
 		$finalresult=$this->psslib->getandcheckPage($numberUrl,'');
-		
+		$finalArray = array();
 
 		#################### About #########################
 		$AbArray=array();
