@@ -25,41 +25,13 @@ class mn extends CI_Controller {
 		{
 			$this->proxyStatus=$this->psslib->checkProxy();
 		}
-		$table='CRON_STATUS';
-		$condition='WHERE status="Running" and state="MN"';
-		$res=$this->crawler->cron_exists($table,$condition);
-		$status=$res[0]['status'];
-		if($status=="Running")
-		{
-			echo "Already Running.";
-		}
-		else
-		{
-			$table='CRON_STATUS';
-			$condition='WHERE state="MN" and date=CURDATE()';
-			$res=$this->crawler->cron_exists($table,$condition);
-			$count=count($res);
-			if($count==0)
-			{
-				 echo "Crawler MN Running\n";
-				$date = date('y-m-d');
-				$values=array('status'=>'Running',
-				'state'=>$this->State,'date'=>$date);
-				$this->db->insert('CRON_STATUS',$values);
-				$this->runCrawler();
-			}
-			else
-			{
-				echo "Already run today";
-			}
-			$this->update();
-			$this->success();
-			
-			}
-		}
+		$this->runCrawler();
+		$this->success();
+	}
 		
 	function runCrawler()
 	{
+		echo "run mn crawler\n";
 		$this->unlinkfiles();
 		$this->searchPage();
 	}
@@ -79,12 +51,7 @@ class mn extends CI_Controller {
 				$offenceArray[]=$tempData;
 			}
 		}
-		/*$key2="aa";
-		$key1='';
-		$checkrecords="500";
-		$value='';
-		$resultFile2=$this->gotoFiltration($checkrecords,$value,$key1,$key2);
-		$this->parseMainPage($resultFile2,$key2);*/
+		
 		if(preg_match('/<form(.*?)<\/form>/is',$resultFile,$match))
 		{
 			$checkrecords=1;
@@ -599,43 +566,6 @@ class mn extends CI_Controller {
 			}
 		}
 
-		########################for IA_DETAINERS table #############################
-		/*
-		//Skip this insertion 
-		$IAactive_detainersArray=array();
-		$IAactive_detainersArray['DCNumber']= trim($DCNumber);
-		$IA_detainerstablename="INMATE_ACTIVE_DETAINERS";
-		$detainers_condition=" WHERE DCNumber='".$IAactive_detainersArray['DCNumber']."'";
-		$detainers_result=$this->crawler->array_exists($IA_detainerstablename,$detainers_condition);
-		//$this->updateLog(" Going to insert records in $IA_detainerstablename table");
-		if(count($detainers_result)==0)
-		{
-			$this->crawler->insert_array($IA_detainerstablename,$IAactive_detainersArray);
-		}
-		else
-		{
-			$this->psslib->appendFile($this->psslib->errorLog," duplicate records are already exists in $IA_detainerstablename table ");
-		}
-		
-		
-
-		################### for inmate_active_incarhist table #############################
-		$IA_incarhistArray=array();
-		$IA_incarhistArray['DCNumber']= trim($DCNumber);
-		$IA_incarhisttablename="INMATE_ACTIVE_INCARHIST";
-		$incart_condition=" WHERE DCNumber='".$IA_incarhistArray['DCNumber']."'";
-		$incart_result=$this->pssdb->Select($IA_incarhisttablename,$incart_condition);
-		$this->updateLog(" Going to insert records in $IA_incarhisttablename table");
-		if($incart_result==0)
-		{
-			$this->Insert($IA_incarhisttablename,$IA_incarhistArray);
-		}
-		else
-		{
-			$this->psslib->appendFile($this->psslib->errorLog," duplicate records are already exists in $IA_incarhisttablename table ");
-		}
-		*/
-
 		################### for inmate_active_aliases table ###########################
 		$IA_aliasesArray = array();
 		$IA_aliasesArray['DCNumber']	= $DCNumber;
@@ -739,14 +669,7 @@ class mn extends CI_Controller {
 		}
 		return $keyArray;
 	}
-	function update()
-	{
-		$status=array('status'=>'Success');
-		$date = date('y-m-d');
-		$this->db->where('date',$date);
-        $this->db->update('CRON_STATUS', $status); 
-	}
-
+	
 	function success()
 	{
 		echo "Complete Successfully";

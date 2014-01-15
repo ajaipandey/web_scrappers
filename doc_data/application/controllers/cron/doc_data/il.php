@@ -1,16 +1,6 @@
 <?php if ( ! defined('BASEPATH')) exit('No direct script access allowed');
 error_reporting(E_ERROR | E_WARNING | E_PARSE);
 class il extends CI_Controller {
-	/*var $proxyPort;
-	var $htmlDoc;
-	var $xpath;
-	var $proxyDoneArr = array();
-	var $proxyMaxHits = 50;
-	var $proxyStatus = 0;
-	var $proxyArr;
-	var $proxyCount = 0;
-	var $proxyDetail = '';
-	var $websiteCurrHits = 0;*/
 	var $proxyFile='application/models/proxy.txt';
 
 	function __construct(){
@@ -35,65 +25,43 @@ class il extends CI_Controller {
 		{
 			$this->proxyStatus=$this->psslib->checkProxy();
 		}
-		$table='CRON_STATUS';
-		$condition='WHERE status="Running" and state="IL"';
-		$res=$this->crawler->cron_exists($table,$condition);
-		$status=$res[0]['status'];
-		if($status=="Running")
-		{
-		 echo "Already Running.";
-		}
-		else
-		{
-		$table='CRON_STATUS';
-		$condition='WHERE state="IL" and date=CURDATE()';
-		$res=$this->crawler->cron_exists($table,$condition);
-		$count=count($res);
-		if($count==0)
-		{
-			echo "Crawler IL Running\n";
-			$date = date('y-m-d');
-			$values=array('status'=>'Running',
-			'state'=>$this->State,'date'=>$date);
-			$this->db->insert('CRON_STATUS',$values);
-			$this->searchPagebyname();
-		}
-		else
-		{
-			echo "Already run on today";
-		}
-		$this->update();
+		$this->searchPagebyname();
 		$this->success();
-		}
 	}
+	
 	function searchPagebyname()
 	{
+		echo "run il crawler\n";
 		$url=$this->url;
-		$this->psslib->updateLog(" Going to search page by name...");
+		
 		$resultFile=$this->psslib->getandcheckPage($url,'');
 		if(preg_match('/<form.*?id\W+aspnetForm.*?>(.*?)<\/form>/is',$resultFile,$match))
 		{
 			$result=$match[1];
 			$formData=$this->psslib->parseFormData($result);
-			$formData['idoc']="a";
-			$formData['selectlist1']="Last";
-			$formData['submit']="Inmate Search";
-			$contents=$formData=$this->psslib->getContent($formData);
-			$url2="http://www.idoc.state.il.us/subsections/search/ISListInmates2.asp";
-			$nextResult=$this->psslib->getandcheckPage($url2,$contents,'');
-			$i=0;
-			while(preg_match('/<OPTION\s*SELECTED/is',$nextResult,$match))
-			{ 
-				$nextResult=$this->psslib->after($match[0],$nextResult);
-				if(preg_match('/>(.*?)<\/option>/is',$nextResult,$match))
-				{
-					$selectonebyone=$match[1];
-					$selectonebyone=preg_replace('/<.*?>/is','',$selectonebyone);
-					$selectonebyone=preg_replace('/\s+/is',' ',$selectonebyone);
-					$selectonebyone=preg_replace('/\s+$/is','',$selectonebyone);
-					$this->getilliFinalpage($selectonebyone,$i);
+			for($i=97;$i<123;$i++) {##LOOP for Last name From a-z
+				$key1=chr($i);
+				$this->psslib->updateLog(" Going to search page by name=$key1 ...");
+				$formData['idoc']=$key1;
+				$formData['selectlist1']="Last";
+				$formData['submit']="Inmate Search";
+				$contents=$formData=$this->psslib->getContent($formData);
+				$url2="http://www.idoc.state.il.us/subsections/search/ISListInmates2.asp";
+				$nextResult=$this->psslib->getandcheckPage($url2,$contents,'');
+				$i=0;
+				while(preg_match('/<OPTION\s*SELECTED/is',$nextResult,$match))
+				{ 
+					$nextResult=$this->psslib->after($match[0],$nextResult);
+					if(preg_match('/>(.*?)<\/option>/is',$nextResult,$match))
+					{
+						$selectonebyone=$match[1];
+						$selectonebyone=preg_replace('/<.*?>/is','',$selectonebyone);
+						$selectonebyone=preg_replace('/\s+/is',' ',$selectonebyone);
+						$selectonebyone=preg_replace('/\s+$/is','',$selectonebyone);
+						$this->getilliFinalpage($selectonebyone,$i);
+					}
+					$i++;
 				}
-				$i++;
 			}
 		}
 	}
@@ -245,39 +213,49 @@ class il extends CI_Controller {
 		$finalArray['DCNumber']		=trim($DCNumber);
 
 		################### physical profile #####################
-		$this->xpath = new DOMXPath($this->htmlDoc);
-		$xpathVal7='//table[@class="tmpl_brdrclr"]//table[5]//tr';
-		$nodelist7 = $this->xpath->query($xpathVal7);
-		foreach($nodelist7 as $n)
+		$Physicalprofile='';
+		if(preg_match('/>\s*PHYSICAL\s*PROFILE\s*<(.*?)<\/table>(.*?)<\/table>/is',$FinalResultFile,$match))
 		{
-			$xpathVal6='.//td//b';
-			$nodelist6 = $this->xpath->query($xpathVal6,$n);
-			foreach($nodelist6 as $k)
+			$Physicalprofile=$match[2];
+			@$this->htmlDoc->loadHTML($Physicalprofile);
+			$this->xpath = new DOMXPath($this->htmlDoc);
+			$xpathVal7='//table//tr';
+			$nodelist7 = $this->xpath->query($xpathVal7);
+			foreach($nodelist7 as $n)
 			{
-				$key1=trim($k->nodeValue);
-				$key1=preg_replace('/\:/is','',$key1);
-				$key1=preg_replace('/<.*?>/is','',$key1);
-				$key1=preg_replace('/\s+/is',' ',$key1);
-				$key1=preg_replace('/\s+$/is','',$key1);
-				$key1=$this->psslib->htmlEntityToHtml($key1);
+				$xpathVal6='.//td//b';
+				$nodelist6 = $this->xpath->query($xpathVal6,$n);
+				foreach($nodelist6 as $k)
+				{
+					$key1=trim($k->nodeValue);
+					$key1=preg_replace('/\:/is','',$key1);
+					$key1=preg_replace('/<.*?>/is','',$key1);
+					$key1=preg_replace('/\s+/is',' ',$key1);
+					$key1=preg_replace('/\s+$/is','',$key1);
+					$key1=$this->psslib->htmlEntityToHtml($key1);
+				}
+				$xpathVal3='.//td[2]';
+				$nodelist3 = $this->xpath->query($xpathVal3,$n);
+				foreach($nodelist3 as $kk)
+				{
+					$value1=trim($kk->nodeValue);
+					$value1=preg_replace('/<.*?>/is','',$value1);
+					$value1=preg_replace('/\s+/is',' ',$value1);
+					$value1=$this->psslib->htmlEntityToHtml($value1);
+				}
+				$finalArray[$key1]=$value1;
 			}
-			$xpathVal3='.//td[2]';
-			$nodelist3 = $this->xpath->query($xpathVal3,$n);
-			foreach($nodelist3 as $kk)
-			{
-				$value1=trim($kk->nodeValue);
-				$value1=preg_replace('/<.*?>/is','',$value1);
-				$value1=preg_replace('/\s+/is',' ',$value1);
-				$value1=$this->psslib->htmlEntityToHtml($value1);
-			}
-			$finalArray[$key1]=$value1;
+		}
+		else
+		{
+			$this->psslib->appendFile($this->psslib->errorLog," physical profile for dateofbirth,hair,eyes not found on website");
 		}
 
 		################### MARKS, SCARS, & TATTOOS #####################
 		$tatooArray=array();
 		if(preg_match('/>\s*MARKS\,\s*SCARS\,\s*\W+\s*TATTOOS\s*</is',$FinalResultFile))
 		{
-
+			@$this->htmlDoc->loadHTML($FinalResultFile);
 			$this->xpath = new DOMXPath($this->htmlDoc);
 			$xpathVal78='//table[@class="tmpl_brdrclr"]//table[6]//tr//font';
 			$nodelist78 = $this->xpath->query($xpathVal78);
@@ -292,7 +270,6 @@ class il extends CI_Controller {
 				}
 				$tatooArray[]=$marks;
 			}
-
 		}
 		else
 		{
@@ -301,11 +278,13 @@ class il extends CI_Controller {
 
 
 		################### ADMISSION RELEASE DISCHARGE INFO #####################
-
-		if(preg_match('/>\s*ADMISSION\s*\/\s*RELEASE\s*\/\s*DISCHARGE\s*INFO\s*</is',$FinalResultFile))
+		$Admissiontempfile='';
+		if(preg_match('/>\s*ADMISSION\s*\/\s*RELEASE\s*\/\s*DISCHARGE\s*INFO.*?>(.*?)<\/table>(.*?)<\/table>/is',$FinalResultFile,$match2))
 		{
+			$Admissiontempfile=$match2[2];
+			@$this->htmlDoc->loadHTML($Admissiontempfile);
 			$this->xpath = new DOMXPath($this->htmlDoc);
-			$xpathVal82='//table[@class="tmpl_brdrclr"]//table[8]//tr';
+			$xpathVal82='//table//tr';
 			$nodelist82 = $this->xpath->query($xpathVal82);
 			foreach($nodelist82 as $n)
 			{
@@ -335,10 +314,11 @@ class il extends CI_Controller {
 		}
 		else
 		{
-			$this->psslib->appendFile($this->psslib->errorLog," ADMISSION RELEASE DISCHARGE INFO not found on website");
+			$this->appendFile($this->errorLog," ADMISSION RELEASE DISCHARGE INFO for addmission date,Parole, not found on website");
 		}
 
 		################### SENTENCING INFORMATION ###################
+		$tempfile='';
 		if(preg_match('/>\s*SENTENCING\s*INFORMATION.*?table>(.*?)<\/table></is',$FinalResultFile,$match))
 		{
 			$sentArray=array();
@@ -366,7 +346,7 @@ class il extends CI_Controller {
 				{
 					$value3=trim($kk->nodeValue);
 					$value3=preg_replace('/<.*?>/is','',$value3);
-					$value3=preg_replace('/\s+/is','',$value3);
+					$value3=preg_replace('/\s+/is',' ',$value3);
 					$value3=$this->psslib->htmlEntityToHtml($value3);
 
 				}
@@ -611,8 +591,6 @@ class il extends CI_Controller {
 				$this->psslib->appendFile($this->psslib->errorLog," duplicate records are already exists in $IA_aliasTablename table for $selectonebyone ");
 			}
 		}
-
-
 		//------------------------inmate_active_incarhist -----------------
 		$IA_incarhistArray = array();
 		$IA_incarhistArray['DCNumber']		= $finalArray['DCNumber'];
@@ -685,15 +663,6 @@ class il extends CI_Controller {
 		if(file_exists($this->logFile)){unlink($this->logFile);}
 		if(file_exists($this->currentLog)){unlink($this->currentLog);}
 
-	}
-	
-	function update()
-	{
-		$status=array('status'=>'Success');
-		
-		$date = date('y-m-d');
-		$this->db->where('date',$date);
-        $this->db->update('CRON_STATUS', $status); 
 	}
 
 	function success()

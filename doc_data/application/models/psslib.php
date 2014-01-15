@@ -2,6 +2,7 @@
 
 class Psslib extends CI_Model
 {
+
 	var $proxyPort;
 	var $proxyDoneArr = array();
 	var $proxyMaxHits = 50;
@@ -18,7 +19,6 @@ class Psslib extends CI_Model
 	function pssLIB()
 	{
 		parent::__construct($this->cookFile);
-		
 	}
 
 	function before ($inthis, $inthat)
@@ -199,6 +199,7 @@ class Psslib extends CI_Model
 	//-------------------------------proxyCode-----------------------
 	function getPage($url,$content1,$referer='')
 	{
+		
 		$this->errorURL=$url;
 		$resultHtmlPage='';
 		if($this->proxyStatus != 0)

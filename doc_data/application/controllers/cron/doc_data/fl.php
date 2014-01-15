@@ -14,7 +14,7 @@ class fl extends CI_Controller {
 		$this->proxyLog    	= "application/logs/".$this->siteName."_proxyLog.txt";
 		$this->headerFname	= 'head.txt';
 		$this->downloadurl	= 'http://www.dc.state.fl.us/pub/obis_request.html';
-		$this->db1        	= $this->crawler->odbc();
+		//$this->db1        	= $this->crawler->odbc();
 		$this->db 		  	= $this->crawler->development_database();
 		$this->State		="FL"; 
 		
@@ -26,22 +26,8 @@ class fl extends CI_Controller {
 		{
 			$this->proxyStatus=$this->psslib->checkProxy();
 		}
-		$this->psslib->updateLog("Going to check cron status..");
-		$table='CRON_STATUS';
-		$condition='WHERE state="FL" and date=CURDATE()';
-		$res=$this->crawler->cron_exists($table,$condition);
-		$count=count($res);
-		if($count==0)
-		{ 	
-			echo "Crawler FL Running\n";
-			$date = date('y-m-d');
-			$values=array('status'=>'Running',
-			'state'=>$this->State,'date'=>$date);
-			$this->psslib->updateLog("Going to insert cron status..");
-			$this->db->insert('CRON_STATUS',$values);
 			$this->startCrawler();
 			echo "going to fetch data from mdb file\n";
-			//$odbc_conn = $this->crawler->odbc();
 			$db = new PDO('odbc:MDB-FL','root','');
 			$tablesArray=array();
 			$q = $db->prepare("SELECT * FROM MSysObjects WHERE Type=1 AND Flags=0");
@@ -63,8 +49,6 @@ class fl extends CI_Controller {
 						}
 					}
 					if($tableName!='CONTENTS'){
-						if($tableName=='INMATE_ACTIVE_SCARSMARKS'){	$tableName="INMATE_ACTIVE_SCARS";};
-						if($tableName=='INMATE_RELEASE_SCARSMARKS'){	$tableName="INMATE_RELEASE_SCARS";};
 						$table_cond="WHERE DCNumber='".$result['DCNumber']."'";
 						$table_result=$this->crawler->array_exists($tableName,$table_cond);
 						if(count($table_result)==0)
@@ -84,7 +68,6 @@ class fl extends CI_Controller {
 					$state_code	="FL";
 					$image_status=0;
 					$statetableName1="STATES";
-					
 					while($result1 = $stmt1->fetch(PDO::FETCH_ASSOC))
 					{
 						$state_array1=array();
@@ -150,16 +133,12 @@ class fl extends CI_Controller {
 				}
 			}
 			$this->selectDcnumber();
-		}
-		else
-		{
-			echo "Already run today";
-		}
-		$this->update();
-		$this->success();
+			$this->success();
 	}
+	
 	function startCrawler()
-	{
+	{    
+		echo "run fl crawler\n";
 		$this->psslib->updateLog("Going to download data from given url..");
 		#$this->myGET('ip.html','http://x5.net/ip.html',"S");
 		$this->myGET('downloadPage.html',$this->downloadurl,"S");
@@ -272,14 +251,6 @@ class fl extends CI_Controller {
 		$conditions = array('DCNumber' => $inmate_imagesArray['DCNumber'], 'image_status' =>0,'state_code'=>'FL');
 		$this->db->where($conditions);
         $this->db->update('STATES', $status); 
-	}
-	function update()
-	{
-		$status=array('status'=>'Success');
-		
-		$date = date('y-m-d');
-		$this->db->where('date',$date);
-        $this->db->update('CRON_STATUS', $status); 
 	}
 
 	function success()

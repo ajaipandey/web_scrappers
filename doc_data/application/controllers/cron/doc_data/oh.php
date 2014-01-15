@@ -24,38 +24,14 @@ class oh extends CI_Controller {
 		{
 			$this->proxyStatus=$this->psslib->checkProxy();
 		}
-		$table='CRON_STATUS';
-		$condition='WHERE status="Running" and state="OH"';
-		$res=$this->crawler->cron_exists($table,$condition);
-		$status=$res[0]['status'];
-		if($status=="Running")
-		{
-			echo "Already Running.";
-		}
-		else
-		{   
-			$table='CRON_STATUS';
-			$condition='WHERE state="OH" and date=CURDATE()';
-			$res=$this->crawler->cron_exists($table,$condition);
-			$count=count($res);
-			if($count==0)
-			{   echo "Crawler OH Running\n";
-				$date = date('y-m-d');
-				$values=array('status'=>'Running',
-				'state'=>$this->State,'date'=>$date);
-				$this->db->insert('CRON_STATUS',$values);
-				$this->runCrawler();
-			}
-			else
-			{
-				 echo "Already run on today";
-			}
-			$this->update();
-			$this->success();
-		}
+		
+		$this->runCrawler();
+		$this->success();
 	}
+	
 	function runCrawler()
 	{
+		echo "run oh crawler\n";
 		$this->unlinkfiles();
 		$seacrhName='a';
 		$this->searchPage($seacrhName);
@@ -84,36 +60,38 @@ class oh extends CI_Controller {
 
 		if(preg_match('/id\W+aspnetForm.*?(.*?)<\/form>/is',$resultFile,$match))
 		{
-			$key1='a';
-			$checkrecords=0;
-			$formData=$this->psslib->parseFormData($match[1]);
-			$resultFile2=$this->gotoFiltration($checkrecords,$formData,$key1);##Search By Fisrt Name
-			// $this->nextPagebyname($resultFile2);exit;   //just for testing
-			if($checkrecords>=500){
-				for($i=97;$i<123;$i++) {##LOOP for Last name From a-z
-					$key2=chr($i);
-					$resultFile2=$this->gotoFiltration($checkrecords,$formData,$key1,$key2);##Search By Fisrt Name and Lastname Iteration
-					if($checkrecords>=500){
-						foreach($countyArray as $comCountyKey){
-							$resultFile2=$this->gotoFiltration($checkrecords,$formData,$key1,$key2,$comCountyKey);##Search By Fisrt Name and Lastname Iteration
-							if($checkrecords>=500){
-								foreach($countyArray as $resCountyKey){
-									$resultFile2=$this->gotoFiltration($checkrecords,$formData,$key1,$key2,$comCountyKey,$resCountyKey);##Search By Fisrt Name and Lastname Iteration
+			for($i=97;$i<123;$i++) {##LOOP for Last name From a-z
+				$key1=chr($i);
+				$checkrecords=0;
+				$formData=$this->psslib->parseFormData($match[1]);
+				$resultFile2=$this->gotoFiltration($checkrecords,$formData,$key1);##Search By Fisrt Name
+				// $this->nextPagebyname($resultFile2);exit;   //just for testing
+				if($checkrecords>=500) {
+					for($i=97;$i<123;$i++) {##LOOP for Last name From a-z
+						$key2=chr($i);
+						$resultFile2=$this->gotoFiltration($checkrecords,$formData,$key1,$key2);##Search By Fisrt Name and Lastname Iteration
+						if($checkrecords>=500){
+							foreach($countyArray as $comCountyKey){
+								$resultFile2=$this->gotoFiltration($checkrecords,$formData,$key1,$key2,$comCountyKey);##Search By Fisrt Name and Lastname Iteration
+								if($checkrecords>=500){
+									foreach($countyArray as $resCountyKey){
+										$resultFile2=$this->gotoFiltration($checkrecords,$formData,$key1,$key2,$comCountyKey,$resCountyKey);##Search By Fisrt Name and Lastname Iteration
+										$this->nextPagebyname($resultFile2);
+									}
+								}else{
+
 									$this->nextPagebyname($resultFile2);
 								}
-							}else{
-
-								$this->nextPagebyname($resultFile2);
 							}
+						}else{
+							$this->psslib->updateLog(" Going to search page after search by first for $key1 and last name for $key2...");
+							$this->nextPagebyname($resultFile2);
 						}
-					}else{
-						$this->psslib->updateLog(" Going to search page after search by first for $key1 and last name for $key2...");
-						$this->nextPagebyname($resultFile2);
 					}
+				}else{
+					$this->psslib->updateLog(" Going to search page after search by last name for $key1...");
+					$this->nextPagebyname($resultFile2);
 				}
-			}else{
-				$this->psslib->updateLog(" Going to search page after search by last name for $key1...");
-				$this->nextPagebyname($resultFile2);
 			}
 		}else{
 			$this->psslib->errorLog(" -----Search Form Not Found-----!");
@@ -200,7 +178,6 @@ class oh extends CI_Controller {
 		$pagesResult=$nextResult;
 		do
 		{
-			//$this->writeToFile("page$pagenumber.html",$pagesResult);
 			@$this->htmlDoc->loadHTML($pagesResult);
 			$this->psslib->updateLog("Going to Parse numberUrl for pagenumber ($pagenumber).......");
 			$this->xpath = new DOMXPath($this->htmlDoc);
@@ -762,19 +739,10 @@ class oh extends CI_Controller {
 		if(file_exists($this->currentLog)){unlink($this->currentLog);}
 
 	}
-	
-	function update()
-	{
-		$status=array('status'=>'Success');
-		
-		$date = date('y-m-d');
-		$this->db->where('date',$date);
-        $this->db->update('CRON_STATUS', $status); 
-	}
 
 	function success()
 	{
-		echo "Complete Successfully";
+		echo "Complete Successfully\n";
 	}
 }
 ?>
